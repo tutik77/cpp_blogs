@@ -336,9 +336,18 @@ function createPostCard(post) {
     let mediaHtml = '';
     if (post.attachments && post.attachments.length > 0) {
         const photo = post.attachments.find(a => a.type === 'photo');
+        const video = post.attachments.find(a => a.type === 'video');
+
         if (photo) {
             const url = `${CONFIG.APP_API_URL}/${photo.file_path}`;
             mediaHtml = `<div class="post-media"><img src="${url}" alt=""></div>`;
+        } else if (video) {
+            const url = `${CONFIG.APP_API_URL}/${video.file_path}`;
+            mediaHtml = `
+                <div class="post-media">
+                    <video src="${url}" controls preload="metadata"></video>
+                </div>
+            `;
         }
     }
 
