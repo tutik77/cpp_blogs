@@ -298,6 +298,13 @@ a:hover {
     margin-bottom: var(--spacing-xl);
 }
 
+.feed-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
 .feed-container {
     display: flex;
     flex-direction: column;
@@ -412,6 +419,22 @@ a:hover {
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+}
+
+.feed-search {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.feed-search-input {
+    max-width: 260px;
+}
+
+.feed-search-info {
+    margin-top: var(--spacing-sm);
     color: var(--text-tertiary);
     font-size: 0.875rem;
 }
@@ -631,6 +654,18 @@ a:hover {
     margin-bottom: var(--spacing-xs);
 }
 
+.profile-stats {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-sm);
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+}
+
+.profile-follow-actions {
+    margin-top: var(--spacing-md);
+}
+
 .profile-posts {
     margin-top: var(--spacing-xl);
 }
@@ -641,6 +676,65 @@ a:hover {
     gap: var(--spacing-md);
     padding-top: var(--spacing-lg);
     border-top: 1px solid var(--border-color);
+}
+
+.avatar-crop-content {
+    padding: var(--spacing-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.avatar-crop-preview-wrapper {
+    display: flex;
+    justify-content: center;
+}
+
+.avatar-crop-preview {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    cursor: grab;
+}
+
+.avatar-crop-preview img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center center;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.avatar-crop-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.avatar-crop-controls label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.avatar-crop-zoom {
+    width: 100%;
+}
+
+.avatar-crop-hint {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+}
+
+.avatar-crop-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
 }
 
 /* ==================== Loading ==================== */
@@ -673,6 +767,44 @@ a:hover {
     height: 64px;
     margin-bottom: var(--spacing-md);
     opacity: 0.5;
+}
+
+.toast-container {
+    position: fixed;
+    bottom: var(--spacing-lg);
+    right: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    z-index: 1100;
+}
+
+.toast {
+    min-width: 260px;
+    max-width: 360px;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    border-left: 3px solid var(--primary-500);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-lg);
+    font-size: 0.9rem;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-success {
+    border-left-color: var(--success);
+}
+
+.toast-error {
+    border-left-color: var(--error);
 }
 
 /* ==================== Animations ==================== */

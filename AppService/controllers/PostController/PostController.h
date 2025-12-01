@@ -16,6 +16,7 @@ public:
   ADD_METHOD_TO(PostController::getUserPosts, "/users/{1}/posts", Get);
   ADD_METHOD_TO(PostController::likePost, "/posts/{1}/like", Post, "AuthFilter");
   ADD_METHOD_TO(PostController::unlikePost, "/posts/{1}/like", Delete, "AuthFilter");
+  ADD_METHOD_TO(PostController::searchPosts, "/posts/search", Get);
   
   METHOD_LIST_END
 
@@ -45,5 +46,8 @@ public:
   void unlikePost(const HttpRequestPtr &req,
                   std::function<void(const HttpResponsePtr &)> &&callback,
                   int64_t postId) const;
+
+  void searchPosts(const HttpRequestPtr &req,
+                   std::function<void(const HttpResponsePtr &)> &&callback) const;
 };
 }

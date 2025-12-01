@@ -8,7 +8,6 @@ void FeedController::getFeed(
     std::function<void(const HttpResponsePtr &)> &&callback) const {
   
   auto userId = req->attributes()->get<int64_t>("user_id");
-
   int offset = 0;
   int limit = 20;
   
@@ -24,18 +23,21 @@ void FeedController::getFeed(
   auto db = drogon::app().getDbClient();
 
   try {
-
     std::string sql =
         "SELECT p.id, p.author_user_id, p.text, p.visibility, p.created_at, p.updated_at, "
-        "       u.username, u.avatar_path "
+        "       u.username, u.avatar_path, "
+        "       CASE WHEN p.author_user_id IN ( "
+        "            SELECT following_user_id FROM follows WHERE follower_user_id = $1 "
+        "       ) THEN 0 ELSE 1 END AS follow_priority "
         "FROM posts p "
         "LEFT JOIN users u ON u.user_id = p.author_user_id "
         "WHERE p.visibility = 'public' "
-        "ORDER BY p.created_at DESC "
+        "  AND p.author_user_id <> $1 "
+        "ORDER BY follow_priority ASC, p.created_at DESC "
         "LIMIT " +
         std::to_string(limit) + " OFFSET " + std::to_string(offset);
 
-    auto result = db->execSqlSync(sql);
+    auto result = db->execSqlSync(sql, userId);
 
     Json::Value feed(Json::arrayValue);
     for (const auto &row : result) {
@@ -75,10 +77,17 @@ void FeedController::getFeed(
       post["attachments"] = attachments;
 
       auto likesResult = db->execSqlSync(
-        "SELECT COUNT(*) as count FROM likes WHERE post_id = $1",
+        "SELECT COUNT(*) as count, "
+        "       SUM(CASE WHEN user_id = $1 THEN 1 ELSE 0 END) as liked_by_me "
+        "FROM likes WHERE post_id = $2",
+        userId,
         postId
       );
       post["likes_count"] = (Json::Int64)likesResult[0]["count"].as<int64_t>();
+      int64_t likedByMe = likesResult[0]["liked_by_me"].isNull()
+                              ? 0
+                              : likesResult[0]["liked_by_me"].as<int64_t>();
+      post["is_liked"] = likedByMe > 0;
 
       auto commentsResult = db->execSqlSync(
         "SELECT COUNT(*) as count FROM comments WHERE post_id = $1",

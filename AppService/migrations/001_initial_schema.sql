@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS posts (
 
 CREATE INDEX IF NOT EXISTS idx_author ON posts(author_user_id);
 CREATE INDEX IF NOT EXISTS idx_created ON posts(created_at);
+CREATE INDEX IF NOT EXISTS idx_posts_text_fts ON posts USING GIN (to_tsvector('russian', text));
 
 CREATE TABLE IF NOT EXISTS attachments (
   id BIGSERIAL PRIMARY KEY,

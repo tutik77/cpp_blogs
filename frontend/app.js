@@ -9,7 +9,10 @@ const state = {
     user: null,
     token: null,
     currentPostId: null,
-    posts: []
+    posts: [],
+    searchQuery: '',
+    isSearchMode: false,
+    avatarCrop: null
 };
 
 function saveAuth(token, identifier, options = {}) {
@@ -169,6 +172,9 @@ async function loadFeed() {
     try {
         const data = await apiCall(`${CONFIG.APP_API_URL}/feed`);
         state.posts = data.posts || [];
+        state.isSearchMode = false;
+        state.searchQuery = '';
+        updateFeedSearchInfo();
         renderPosts(state.posts);
     } catch (error) {
         console.error('Error loading feed:', error);
@@ -284,6 +290,152 @@ async function createComment(postId, content) {
     }
 }
 
+async function searchPostsByQuery(query) {
+    const params = new URLSearchParams();
+    params.set('q', query);
+    const url = `${CONFIG.APP_API_URL}/posts/search?${params.toString()}`;
+    const data = await apiCall(url);
+    return data;
+}
+
+function openAvatarCrop(file) {
+    const imgEl = document.getElementById('avatarCropImage');
+    const zoomInput = document.getElementById('avatarCropZoom');
+    const previewEl = document.getElementById('avatarCropPreview');
+    if (!imgEl || !zoomInput || !previewEl) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+            const rect = previewEl.getBoundingClientRect();
+            const previewSize = Math.min(rect.width, rect.height) || 260;
+
+            const scaleX = previewSize / img.width;
+            const scaleY = previewSize / img.height;
+            const baseScale = Math.max(scaleX, scaleY);
+
+            state.avatarCrop = {
+                file,
+                image: img,
+                baseScale,
+                zoom: 1,
+                offsetX: 0,
+                offsetY: 0,
+                previewSize
+            };
+            imgEl.src = reader.result;
+            zoomInput.value = '1';
+            updateAvatarCropTransform();
+            showModal('avatarCropModal');
+        };
+        img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function updateAvatarCropTransform() {
+    const imgEl = document.getElementById('avatarCropImage');
+    if (!imgEl || !state.avatarCrop) return;
+    const { baseScale, zoom, offsetX, offsetY } = state.avatarCrop;
+    const scale = baseScale * zoom;
+    imgEl.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(${scale})`;
+}
+
+function closeAvatarCropModal() {
+    state.avatarCrop = null;
+    closeModal('avatarCropModal');
+}
+
+function saveAvatarCrop() {
+    if (!state.avatarCrop) return;
+    const { image, baseScale, zoom, offsetX, offsetY, previewSize } = state.avatarCrop;
+    const size = previewSize || 260;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, size, size);
+
+    const scale = baseScale * zoom;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.translate(size / 2 + offsetX, size / 2 + offsetY);
+    ctx.scale(scale, scale);
+    ctx.drawImage(image, -image.width / 2, -image.height / 2);
+
+    ctx.restore();
+
+    canvas.toBlob(async (blob) => {
+        if (!blob) {
+            showError('Не удалось подготовить аватар');
+            return;
+        }
+        const file = new File([blob], 'avatar.png', { type: 'image/png' });
+        try {
+            const media = await uploadMediaFile(file);
+            await apiCall(`${CONFIG.APP_API_URL}/users/me`, {
+                method: 'PUT',
+                body: JSON.stringify({ avatar_path: media.file_path })
+            });
+            closeAvatarCropModal();
+            showMyProfile();
+            showSuccess('Аватар обновлен');
+        } catch (e) {
+            showError('Не удалось обновить аватар');
+            console.error(e);
+        }
+    }, 'image/png');
+}
+
+let avatarCropDragging = false;
+let avatarCropStartX = 0;
+let avatarCropStartY = 0;
+let avatarCropStartOffsetX = 0;
+let avatarCropStartOffsetY = 0;
+
+function avatarCropPointerDown(clientX, clientY) {
+    if (!state.avatarCrop) return;
+    avatarCropDragging = true;
+    avatarCropStartX = clientX;
+    avatarCropStartY = clientY;
+    avatarCropStartOffsetX = state.avatarCrop.offsetX;
+    avatarCropStartOffsetY = state.avatarCrop.offsetY;
+}
+
+function avatarCropPointerMove(clientX, clientY) {
+    if (!avatarCropDragging || !state.avatarCrop) return;
+    const dx = clientX - avatarCropStartX;
+    const dy = clientY - avatarCropStartY;
+    state.avatarCrop.offsetX = avatarCropStartOffsetX + dx;
+    state.avatarCrop.offsetY = avatarCropStartOffsetY + dy;
+    clampAvatarCropOffsets();
+    updateAvatarCropTransform();
+}
+
+function avatarCropPointerUp() {
+    avatarCropDragging = false;
+}
+
+function clampAvatarCropOffsets() {
+    if (!state.avatarCrop) return;
+    const { image, baseScale, zoom, previewSize } = state.avatarCrop;
+    const scale = baseScale * zoom;
+    const drawWidth = image.width * scale;
+    const drawHeight = image.height * scale;
+    const r = (previewSize || 260) / 2;
+    const maxOffsetX = Math.max(0, drawWidth / 2 - r);
+    const maxOffsetY = Math.max(0, drawHeight / 2 - r);
+    state.avatarCrop.offsetX = Math.min(maxOffsetX, Math.max(-maxOffsetX, state.avatarCrop.offsetX));
+    state.avatarCrop.offsetY = Math.min(maxOffsetY, Math.max(-maxOffsetY, state.avatarCrop.offsetY));
+}
+
 // ==================== UI Functions ====================
 function renderPosts(posts) {
     const feedContainer = document.getElementById('feedContainer');
@@ -305,6 +457,23 @@ function renderPosts(posts) {
     }
 
     feedContainer.innerHTML = posts.map(post => createPostCard(post)).join('');
+}
+
+function updateFeedSearchInfo() {
+    const info = document.getElementById('feedSearchInfo');
+    if (!info) return;
+
+    if (!state.isSearchMode || !state.searchQuery) {
+        info.textContent = '';
+        return;
+    }
+
+    const count = state.posts.length;
+    if (!count) {
+        info.textContent = `По запросу "${state.searchQuery}" ничего не найдено`;
+    } else {
+        info.textContent = `Найдено ${count} постов по запросу "${state.searchQuery}"`;
+    }
 }
 
 function createPostCard(post) {
@@ -395,7 +564,24 @@ function createPostCard(post) {
 }
 
 function formatDate(dateString) {
-    const date = new Date(dateString);
+    let date;
+    try {
+        if (!dateString) {
+            return '';
+        }
+        if (dateString.endsWith('Z') || dateString.includes('T')) {
+            date = new Date(dateString);
+        } else {
+            const iso = dateString.replace(' ', 'T') + 'Z';
+            date = new Date(iso);
+        }
+        if (Number.isNaN(date.getTime())) {
+            date = new Date(dateString);
+        }
+    } catch (e) {
+        date = new Date(dateString);
+    }
+
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
@@ -438,9 +624,19 @@ async function showUserProfile(userId) {
     }
 
     try {
-        const user = await apiCall(`${CONFIG.APP_API_URL}/users/${userId}`);
-        const posts = await apiCall(`${CONFIG.APP_API_URL}/users/${userId}/posts`);
-        renderUserProfile(user, posts);
+        const [user, posts, followers] = await Promise.all([
+            apiCall(`${CONFIG.APP_API_URL}/users/${userId}`),
+            apiCall(`${CONFIG.APP_API_URL}/users/${userId}/posts`),
+            apiCall(`${CONFIG.APP_API_URL}/users/${userId}/followers`)
+        ]);
+
+        const currentId = state.token ? getUserIdFromToken(state.token) : null;
+        const isSelf = currentId && user.user_id && currentId === user.user_id;
+        const isFollowing = !isSelf && Array.isArray(followers)
+            ? followers.some(f => f.user_id === currentId)
+            : false;
+
+        renderUserProfile(user, posts, { isSelf, isFollowing });
         showModal('profileModal');
     } catch (e) {
         showError('Не удалось загрузить профиль');
@@ -461,7 +657,7 @@ function showMyProfile() {
     showUserProfile(userId);
 }
 
-function renderUserProfile(user, posts) {
+function renderUserProfile(user, posts, options = {}) {
     const profileTitle = document.getElementById('profileTitle');
     const profileAvatar = document.getElementById('profileAvatar');
     const profileUsername = document.getElementById('profileUsername');
@@ -469,15 +665,22 @@ function renderUserProfile(user, posts) {
     const profileBio = document.getElementById('profileBio');
     const profilePostsContainer = document.getElementById('profilePostsContainer');
     const profileActions = document.getElementById('profileActions');
+    const profileFollowers = document.getElementById('profileFollowers');
+    const profileFollowing = document.getElementById('profileFollowing');
+    const profileFollowActions = document.getElementById('profileFollowActions');
 
     const username = user.username || '';
     const displayName = user.display_name || '';
     const bio = user.bio || '';
+    const followersCount = user.followers_count || 0;
+    const followingCount = user.following_count || 0;
 
     if (profileTitle) profileTitle.textContent = `Профиль ${username || displayName}`;
     if (profileUsername) profileUsername.textContent = username;
     if (profileDisplayName) profileDisplayName.textContent = displayName;
     if (profileBio) profileBio.textContent = bio;
+    if (profileFollowers) profileFollowers.textContent = `Подписчики: ${followersCount}`;
+    if (profileFollowing) profileFollowing.textContent = `Подписки: ${followingCount}`;
 
     if (profileAvatar) {
         if (user.avatar_path) {
@@ -489,10 +692,28 @@ function renderUserProfile(user, posts) {
         }
     }
 
+    const currentId = state.token ? getUserIdFromToken(state.token) : null;
+    const isSelf = options.isSelf !== undefined
+        ? options.isSelf
+        : currentId && user.user_id && currentId === user.user_id;
+    const isFollowing = options.isFollowing === true;
+
     if (profileActions) {
-        const currentId = state.token ? getUserIdFromToken(state.token) : null;
-        const isSelf = currentId && user.user_id && currentId === user.user_id;
         profileActions.style.display = isSelf ? 'block' : 'none';
+    }
+
+    if (profileFollowActions) {
+        if (!isSelf && currentId) {
+            profileFollowActions.style.display = 'block';
+            profileFollowActions.innerHTML = `
+                <button class="btn btn-primary" onclick="${isFollowing ? `unfollowUser(${user.user_id})` : `followUser(${user.user_id})`}">
+                    ${isFollowing ? 'Отписаться' : 'Подписаться'}
+                </button>
+            `;
+        } else {
+            profileFollowActions.style.display = 'none';
+            profileFollowActions.innerHTML = '';
+        }
     }
 
     if (profilePostsContainer) {
@@ -508,17 +729,7 @@ async function updateAvatar() {
     const input = document.getElementById('avatarFile');
     if (!input || !input.files || !input.files[0]) return;
 
-    try {
-        const media = await uploadMediaFile(input.files[0]);
-        await apiCall(`${CONFIG.APP_API_URL}/users/me`, {
-            method: 'PUT',
-            body: JSON.stringify({ avatar_path: media.file_path })
-        });
-        showMyProfile();
-    } catch (e) {
-        showError('Не удалось обновить аватар');
-        console.error(e);
-    }
+    openAvatarCrop(input.files[0]);
 }
 
 // ==================== Modal Functions ====================
@@ -625,13 +836,66 @@ function handleFormError(formId, errorId, error) {
 }
 
 function showSuccess(message) {
-    // Simple alert for now, could be improved with toast notifications
-    console.log('Success:', message);
+    showToast(message, 'success');
 }
 
 function showError(message) {
-    console.error('Error:', message);
-    alert(message);
+    showToast(message, 'error');
+}
+
+function showToast(message, type = 'success') {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + (type === 'error' ? 'toast-error' : 'toast-success');
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+    });
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            toast.remove();
+            if (!container.children.length) {
+                container.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+
+async function followUser(userId) {
+    try {
+        await apiCall(`${CONFIG.APP_API_URL}/users/${userId}/follow`, {
+            method: 'POST'
+        });
+        showSuccess('Вы подписались на пользователя');
+        await showUserProfile(userId);
+    } catch (e) {
+        showError('Не удалось подписаться');
+        console.error(e);
+    }
+}
+
+async function unfollowUser(userId) {
+    try {
+        await apiCall(`${CONFIG.APP_API_URL}/users/${userId}/follow`, {
+            method: 'DELETE'
+        });
+        showSuccess('Вы отписались от пользователя');
+        await showUserProfile(userId);
+    } catch (e) {
+        showError('Не удалось отписаться');
+        console.error(e);
+    }
 }
 
 // ==================== Event Listeners ====================
@@ -703,6 +967,53 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const feedSearchInput = document.getElementById('feedSearchInput');
+    const feedSearchButton = document.getElementById('feedSearchButton');
+
+    async function handleSearch() {
+        if (!feedSearchInput) return;
+        const query = feedSearchInput.value.trim();
+        if (!query) {
+            state.isSearchMode = false;
+            state.searchQuery = '';
+            updateFeedSearchInfo();
+            loadFeed();
+            return;
+        }
+
+        try {
+            const data = await searchPostsByQuery(query);
+            state.posts = data.posts || [];
+            state.isSearchMode = true;
+            state.searchQuery = query;
+            renderPosts(state.posts);
+            updateFeedSearchInfo();
+        } catch (error) {
+            showError('Ошибка при поиске постов');
+            console.error('Error searching posts:', error);
+        }
+    }
+
+    if (feedSearchButton && feedSearchInput) {
+        feedSearchButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleSearch();
+        });
+
+        feedSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSearch();
+            } else if (e.key === 'Escape') {
+                feedSearchInput.value = '';
+                state.isSearchMode = false;
+                state.searchQuery = '';
+                updateFeedSearchInfo();
+                loadFeed();
+            }
+        });
+    }
+
     // Add comment form
     const addCommentForm = document.getElementById('addCommentForm');
     if (addCommentForm) {
@@ -729,12 +1040,75 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Close modals on Escape key
+    const avatarCropPreview = document.getElementById('avatarCropPreview');
+    const avatarCropZoom = document.getElementById('avatarCropZoom');
+
+    if (avatarCropPreview) {
+        avatarCropPreview.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            avatarCropPointerDown(e.clientX, e.clientY);
+        });
+        avatarCropPreview.addEventListener('wheel', (e) => {
+            if (!state.avatarCrop) return;
+            e.preventDefault();
+            const zoomInputEl = document.getElementById('avatarCropZoom');
+            let nextZoom = state.avatarCrop.zoom || 1;
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            nextZoom = Math.min(3, Math.max(1, nextZoom + delta));
+            state.avatarCrop.zoom = nextZoom;
+            if (zoomInputEl) {
+                zoomInputEl.value = String(nextZoom);
+            }
+            clampAvatarCropOffsets();
+            updateAvatarCropTransform();
+        }, { passive: false });
+        window.addEventListener('mousemove', (e) => {
+            if (avatarCropDragging) {
+                e.preventDefault();
+                avatarCropPointerMove(e.clientX, e.clientY);
+            }
+        });
+        window.addEventListener('mouseup', () => {
+            avatarCropPointerUp();
+        });
+
+        avatarCropPreview.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            if (!touch) return;
+            avatarCropPointerDown(touch.clientX, touch.clientY);
+        }, { passive: true });
+        window.addEventListener('touchmove', (e) => {
+            if (!avatarCropDragging) return;
+            const touch = e.touches[0];
+            if (!touch) return;
+            avatarCropPointerMove(touch.clientX, touch.clientY);
+        }, { passive: true });
+        window.addEventListener('touchend', () => {
+            avatarCropPointerUp();
+        });
+    }
+
+    if (avatarCropZoom) {
+        avatarCropZoom.addEventListener('input', (e) => {
+            if (!state.avatarCrop) return;
+            const value = parseFloat(e.target.value);
+            if (!Number.isNaN(value)) {
+                state.avatarCrop.zoom = value;
+                clampAvatarCropOffsets();
+                updateAvatarCropTransform();
+            }
+        });
+    }
+
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             const openModal = document.querySelector('.modal.show');
             if (openModal) {
-                closeModal(openModal.id);
+                if (openModal.id === 'avatarCropModal') {
+                    closeAvatarCropModal();
+                } else {
+                    closeModal(openModal.id);
+                }
             }
         }
     });
