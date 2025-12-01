@@ -457,6 +457,7 @@ function renderUserProfile(user, posts) {
     const profileDisplayName = document.getElementById('profileDisplayName');
     const profileBio = document.getElementById('profileBio');
     const profilePostsContainer = document.getElementById('profilePostsContainer');
+    const profileActions = document.getElementById('profileActions');
 
     const username = user.username || '';
     const displayName = user.display_name || '';
@@ -475,6 +476,12 @@ function renderUserProfile(user, posts) {
             const initial = (username || displayName || 'U')[0].toUpperCase();
             profileAvatar.textContent = initial;
         }
+    }
+
+    if (profileActions) {
+        const currentId = state.token ? getUserIdFromToken(state.token) : null;
+        const isSelf = currentId && user.user_id && currentId === user.user_id;
+        profileActions.style.display = isSelf ? 'block' : 'none';
     }
 
     if (profilePostsContainer) {

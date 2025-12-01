@@ -274,8 +274,12 @@ void PostController::getUserPosts(
 
   try {
     auto result = db->execSqlSync(
-      "SELECT id, author_user_id, text, visibility, created_at, updated_at "
-      "FROM posts WHERE author_user_id = $1 ORDER BY created_at DESC",
+      "SELECT p.id, p.author_user_id, p.text, p.visibility, p.created_at, p.updated_at, "
+      "       u.username, u.avatar_path "
+      "FROM posts p "
+      "LEFT JOIN users u ON u.user_id = p.author_user_id "
+      "WHERE p.author_user_id = $1 "
+      "ORDER BY p.created_at DESC",
       userId
     );
 
@@ -289,12 +293,44 @@ void PostController::getUserPosts(
       post["created_at"] = row["created_at"].as<std::string>();
       post["updated_at"] = row["updated_at"].as<std::string>();
 
+      if (!row["username"].isNull()) {
+        post["author_username"] = row["username"].as<std::string>();
+      } else {
+        post["author_username"] = "";
+      }
+      if (!row["avatar_path"].isNull()) {
+        post["author_avatar_path"] = row["avatar_path"].as<std::string>();
+      } else {
+        post["author_avatar_path"] = "";
+      }
+
       int64_t postId = row["id"].as<int64_t>();
       auto likesResult = db->execSqlSync(
         "SELECT COUNT(*) as count FROM likes WHERE post_id = $1",
         postId
       );
       post["likes_count"] = (Json::Int64)likesResult[0]["count"].as<int64_t>();
+
+      auto commentsResult = db->execSqlSync(
+        "SELECT COUNT(*) as count FROM comments WHERE post_id = $1",
+        postId
+      );
+      post["comments_count"] = (Json::Int64)commentsResult[0]["count"].as<int64_t>();
+
+      auto attachmentsResult = db->execSqlSync(
+        "SELECT id, type, file_path FROM attachments WHERE post_id = $1",
+        postId
+      );
+
+      Json::Value attachments(Json::arrayValue);
+      for (const auto &attRow : attachmentsResult) {
+        Json::Value attachment;
+        attachment["id"] = (Json::Int64)attRow["id"].as<int64_t>();
+        attachment["type"] = attRow["type"].as<std::string>();
+        attachment["file_path"] = attRow["file_path"].as<std::string>();
+        attachments.append(attachment);
+      }
+      post["attachments"] = attachments;
 
       posts.append(post);
     }

@@ -77,7 +77,8 @@ void MediaController::uploadMedia(
     std::string filename = timestamp + "_" + file.getFileName();
     std::string filepath = "uploads/" + filename;
     
-    file.saveAs(filepath);
+    // saveAs без префикса upload_path, чтобы не получить uploads/uploads
+    file.saveAs(filename);
 
     Json::Value response;
     response["file_path"] = filepath;

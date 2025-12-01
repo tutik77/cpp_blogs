@@ -345,6 +345,20 @@ a:hover {
     font-size: 1rem;
 }
 
+.author-avatar-image {
+    padding: 0;
+    background: transparent;
+    overflow: hidden;
+}
+
+.author-avatar-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
 .author-info h3 {
     font-size: 1rem;
     margin: 0;
@@ -371,6 +385,20 @@ a:hover {
     color: var(--text-secondary);
     margin-bottom: var(--spacing-lg);
     line-height: 1.7;
+}
+
+.post-media {
+    margin-bottom: var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    max-height: 400px;
+}
+
+.post-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .post-footer {
@@ -564,6 +592,47 @@ a:hover {
     color: var(--text-secondary);
     font-size: 0.875rem;
     line-height: 1.6;
+}
+
+/* ==================== Profile ==================== */
+.profile-content {
+    padding: var(--spacing-xl);
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.profile-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-500), hsl(280, 85%, 60%));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.5rem;
+    overflow: hidden;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
+.profile-info h3 {
+    margin-bottom: var(--spacing-xs);
+}
+
+.profile-posts {
+    margin-top: var(--spacing-xl);
 }
 
 .add-comment-form {
