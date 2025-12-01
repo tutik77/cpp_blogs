@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Platform - Простая блог платформа</title>
+    <meta name="description" content="Современная блог платформа с микросервисной архитектурой">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="container nav-container">
+            <div class="nav-brand">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+                <span class="brand-text">Blog Platform</span>
+            </div>
+            <div class="nav-actions" id="navActions">
+                <!-- Auth buttons (shown when not logged in) -->
+                <div class="auth-buttons" id="authButtons">
+                    <button class="btn btn-ghost" onclick="showLogin()">Войти</button>
+                    <button class="btn btn-primary" onclick="showRegister()">Регистрация</button>
+                </div>
+                <!-- User menu (shown when logged in) -->
+                <div class="user-menu" id="userMenu" style="display: none;">
+                    <button class="btn btn-primary" onclick="showCreatePost()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Создать пост
+                    </button>
+                    <button class="btn btn-ghost" onclick="showMyProfile()">Профиль</button>
+                    <span class="user-name" id="userName"></span>
+                    <button class="btn btn-ghost" onclick="logout()">Выйти</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Welcome Screen (shown when not logged in) -->
+            <div id="welcomeScreen" class="welcome-screen">
+                <div class="welcome-content">
+                    <h1 class="welcome-title">Добро пожаловать в Blog Platform</h1>
+                    <p class="welcome-subtitle">Современная блог платформа на микросервисной архитектуре C++</p>
+                    <div class="welcome-actions">
+                        <button class="btn btn-primary btn-lg" onclick="showRegister()">Начать</button>
+                        <button class="btn btn-ghost btn-lg" onclick="showLogin()">Войти</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feed (shown when logged in) -->
+            <div id="feedScreen" class="feed-screen" style="display: none;">
+                <div class="feed-header">
+                    <h1>Лента постов</h1>
+                </div>
+                <div id="feedContainer" class="feed-container">
+                    <!-- Posts will be loaded here -->
+                    <div class="loading" id="feedLoading">
+                        <div class="spinner"></div>
+                        <p>Загружаем посты...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('loginModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Вход</h2>
+                <button class="modal-close" onclick="closeModal('loginModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="loginForm" class="form">
+                <div class="form-group">
+                    <label for="loginUsername">Email</label>
+                    <input type="email" id="loginUsername" class="form-input" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Пароль</label>
+                    <input type="password" id="loginPassword" class="form-input" required autocomplete="current-password">
+                </div>
+                <div class="form-error" id="loginError"></div>
+                <button type="submit" class="btn btn-primary btn-block">Войти</button>
+            </form>
+            <div class="modal-footer">
+                <p>Нет аккаунта? <a href="#" onclick="closeModal('loginModal'); showRegister()">Зарегистрироваться</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('registerModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Регистрация</h2>
+                <button class="modal-close" onclick="closeModal('registerModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="registerForm" class="form">
+                <div class="form-group">
+                    <label for="registerUsername">Имя пользователя</label>
+                    <input type="text" id="registerUsername" class="form-input" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" class="form-input" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Пароль</label>
+                    <input type="password" id="registerPassword" class="form-input" required autocomplete="new-password">
+                </div>
+                <div class="form-error" id="registerError"></div>
+                <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
+            </form>
+            <div class="modal-footer">
+                <p>Уже есть аккаунт? <a href="#" onclick="closeModal('registerModal'); showLogin()">Войти</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Post Modal -->
+    <div id="createPostModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('createPostModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Создать пост</h2>
+                <button class="modal-close" onclick="closeModal('createPostModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="createPostForm" class="form">
+                <div class="form-group">
+                    <label for="postTitle">Заголовок</label>
+                    <input type="text" id="postTitle" class="form-input" required placeholder="Введите заголовок поста">
+                </div>
+                <div class="form-group">
+                    <label for="postContent">Содержание</label>
+                    <textarea id="postContent" class="form-textarea" rows="6" required placeholder="Расскажите свою историю..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="postMedia">Медиа (необязательно)</label>
+                    <input type="file" id="postMedia" class="form-input" accept="image/*,video/*">
+                </div>
+                <div class="form-error" id="createPostError"></div>
+                <button type="submit" class="btn btn-primary btn-block">Опубликовать</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Comments Modal -->
+    <div id="commentsModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('commentsModal')"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Комментарии</h2>
+                <button class="modal-close" onclick="closeModal('commentsModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="comments-content">
+                <div id="commentsContainer" class="comments-list">
+                    <!-- Comments will be loaded here -->
+                </div>
+                <form id="addCommentForm" class="add-comment-form">
+                    <textarea id="commentContent" class="form-textarea" rows="3" placeholder="Написать комментарий..." required></textarea>
+                    <button type="submit" class="btn btn-primary">Отправить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="profileModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('profileModal')"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="profileTitle">Профиль</h2>
+                <button class="modal-close" onclick="closeModal('profileModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="profile-content">
+                <div class="profile-header">
+                    <div class="profile-avatar" id="profileAvatar"></div>
+                    <div class="profile-info">
+                        <h3 id="profileUsername"></h3>
+                        <p id="profileDisplayName"></p>
+                        <p id="profileBio"></p>
+                    </div>
+                </div>
+                <div class="profile-actions">
+                    <div class="form-group">
+                        <label for="avatarFile">Аватар</label>
+                        <input type="file" id="avatarFile" class="form-input" accept="image/*">
+                    </div>
+                    <button class="btn btn-primary" onclick="updateAvatar()">Сохранить аватар</button>
+                </div>
+                <div class="profile-posts">
+                    <h3>Посты</h3>
+                    <div id="profilePostsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

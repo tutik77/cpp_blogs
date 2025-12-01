@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  postgres_app:
+    image: postgres:16
+    container_name: postgres_app
+    restart: always
+    environment:
+      POSTGRES_DB: app_service
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: 12341234
+    volumes:
+      - postgres_app_data:/var/lib/postgresql/data
+      - ./migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
+    ports:
+      - "5433:5432"
+
+  app_service:
+    build: .
+    container_name: app_service
+    depends_on:
+      - postgres_app
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./uploads:/app/uploads
+    # Если auth-сервис тоже в Docker и в одной сети с именем "auth_service",
+    # можно вместо host.docker.internal в config-docker.json использовать http://auth_service:3000
+
+volumes:
+  postgres_app_data:
+
+

@@ -1,0 +1,15 @@
+{
+  "rdbms": "postgresql",
+  "host": "127.0.0.1",
+  "port": 5432,
+  "dbname": "auth_service",
+  "user": "root",
+  "passwd": "12341234",
+  "tables": [
+    "users"
+  ],
+  "relationships": {
+    "enabled": false,
+    "items": []
+  }
+}

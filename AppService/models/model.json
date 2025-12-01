@@ -1,0 +1,289 @@
+{
+    "tables": [
+        {
+            "name": "users",
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "int8",
+                    "is_primary_key": true,
+                    "is_auto_increment": true
+                },
+                {
+                    "name": "user_id",
+                    "type": "int8",
+                    "not_null": true
+                },
+                {
+                    "name": "username",
+                    "type": "varchar",
+                    "length": 255,
+                    "not_null": true
+                },
+                {
+                    "name": "display_name",
+                    "type": "varchar",
+                    "length": 255
+                },
+                {
+                    "name": "bio",
+                    "type": "text"
+                },
+                {
+                    "name": "avatar_path",
+                    "type": "varchar",
+                    "length": 512
+                },
+                {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "not_null": true,
+                    "default": "now()"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_user_id",
+                    "columns": [
+                        "user_id"
+                    ],
+                    "unique": true
+                }
+            ]
+        },
+        {
+            "name": "follows",
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "int8",
+                    "is_primary_key": true,
+                    "is_auto_increment": true
+                },
+                {
+                    "name": "follower_user_id",
+                    "type": "int8",
+                    "not_null": true
+                },
+                {
+                    "name": "following_user_id",
+                    "type": "int8",
+                    "not_null": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "not_null": true,
+                    "default": "now()"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_follower",
+                    "columns": [
+                        "follower_user_id"
+                    ]
+                },
+                {
+                    "name": "idx_following",
+                    "columns": [
+                        "following_user_id"
+                    ]
+                },
+                {
+                    "name": "idx_unique_follow",
+                    "columns": [
+                        "follower_user_id",
+                        "following_user_id"
+                    ],
+                    "unique": true
+                }
+            ]
+        },
+        {
+            "name": "posts",
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "int8",
+                    "is_primary_key": true,
+                    "is_auto_increment": true
+                },
+                {
+                    "name": "author_user_id",
+                    "type": "int8",
+                    "not_null": true
+                },
+                {
+                    "name": "text",
+                    "type": "text",
+                    "not_null": true
+                },
+                {
+                    "name": "visibility",
+                    "type": "varchar",
+                    "length": 20,
+                    "not_null": true,
+                    "default": "'public'"
+                },
+                {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "not_null": true,
+                    "default": "now()"
+                },
+                {
+                    "name": "updated_at",
+                    "type": "timestamp",
+                    "not_null": true,
+                    "default": "now()"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_author",
+                    "columns": [
+                        "author_user_id"
+                    ]
+                },
+                {
+                    "name": "idx_created",
+                    "columns": [
+                        "created_at"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "attachments",
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "int8",
+                    "is_primary_key": true,
+                    "is_auto_increment": true
+                },
+                {
+                    "name": "post_id",
+                    "type": "int8",
+                    "not_null": true
+                },
+                {
+                    "name": "type",
+                    "type": "varchar",
+                    "length": 20,
+                    "not_null": true
+                },
+                {
+                    "name": "file_path",
+                    "type": "varchar",
+                    "length": 512,
+                    "not_null": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "not_null": true,
+                    "default": "now()"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_post_id",
+                    "columns": [
+                        "post_id"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "likes",
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "int8",
+                    "is_primary_key": true,
+                    "is_auto_increment": true
+                },
+                {
+                    "name": "post_id",
+                    "type": "int8",
+                    "not_null": true
+                },
+                {
+                    "name": "user_id",
+                    "type": "int8",
+                    "not_null": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "not_null": true,
+                    "default": "now()"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_post_likes",
+                    "columns": [
+                        "post_id"
+                    ]
+                },
+                {
+                    "name": "idx_unique_like",
+                    "columns": [
+                        "post_id",
+                        "user_id"
+                    ],
+                    "unique": true
+                }
+            ]
+        },
+        {
+            "name": "comments",
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "int8",
+                    "is_primary_key": true,
+                    "is_auto_increment": true
+                },
+                {
+                    "name": "post_id",
+                    "type": "int8",
+                    "not_null": true
+                },
+                {
+                    "name": "author_user_id",
+                    "type": "int8",
+                    "not_null": true
+                },
+                {
+                    "name": "text",
+                    "type": "text",
+                    "not_null": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "not_null": true,
+                    "default": "now()"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_post_comments",
+                    "columns": [
+                        "post_id"
+                    ]
+                },
+                {
+                    "name": "idx_comment_created",
+                    "columns": [
+                        "created_at"
+                    ]
+                }
+            ]
+        }
+    ]
+}

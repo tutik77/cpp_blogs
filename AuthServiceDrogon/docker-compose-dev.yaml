@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: AuthServiceTable
+    environment:
+      POSTGRES_USER: ${DB_USERNAME?error}
+      POSTGRES_PASSWORD: ${DB_PASSWORD?error}
+      POSTGRES_DB: ${DB_DATABASE?error}
+    ports:
+      - "5432:5432"
+    volumes:
+      # Для postgres:18+ данные должны лежать в /var/lib/postgresql,
+      # чтобы избежать проблем с обновлением и структурой каталогов.
+      - postgres:/var/lib/postgresql
+    networks:
+      - postgres
+    restart: always
+
+  pgadmin:
+      container_name: AuthService_pgadmin
+      image: dpage/pgadmin4:9.0
+
+      depends_on:
+          - postgres
+
+      environment:
+          PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+          PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+
+      ports:
+          - ${PGADMIN_PORT:-5050}:80
+
+      networks:
+          - postgres
+
+      restart: unless-stopped
+
+
+networks:
+  postgres:
+    driver: bridge
+
+
+volumes:
+  postgres:

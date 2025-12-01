@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: AuthServiceTable
+    restart: always
+    environment:
+      POSTGRES_DB: auth_service
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: 12341234
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+      - ./migrations/create_user_table_migration_09_11_1624.sql:/docker-entrypoint-initdb.d/001_create_user_table.sql:ro
+    ports:
+      - "5432:5432"
+
+  auth_service:
+    build: .
+    container_name: auth_service
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_auth_data:
+
+
+
