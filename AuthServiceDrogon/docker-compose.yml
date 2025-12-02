@@ -11,6 +11,7 @@ services:
       POSTGRES_PASSWORD: 12341234
     volumes:
       - postgres_auth_data:/var/lib/postgresql/data
+
       - ./migrations/create_user_table_migration_09_11_1624.sql:/docker-entrypoint-initdb.d/001_create_user_table.sql:ro
     ports:
       - "5432:5432"
@@ -25,6 +26,3 @@ services:
 
 volumes:
   postgres_auth_data:
-
-
-
