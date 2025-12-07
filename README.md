@@ -60,9 +60,35 @@ AuthService -> Postgres (auth_service)
 - AuthService работает на http://localhost:3000
 
 #### Запуск
-cd "C:/Users/Николай/Documents/prog/blog_platform_cpp/AppService"﻿
-docker compose up --build﻿
+- cd "C:/Users/Николай/Documents/prog/blog_platform_cpp/AppService"﻿
+- docker compose up --build
 
+#### Проверка
+- bash tests/smoke_tests.sh
+- Результат: All smoke tests passed ✔
+
+### Frontend
+
+#### Запуск
+- cd frontend﻿
+- start index.html﻿
+или
+- python -m http.server 8080
+- Открыть: http://localhost:8080
+
+## Полная проверка
+1. curl http://localhost:3000/v1/Auth/healthcheck
+2. bash AppService/tests/smoke_tests.sh  
+3. Открыть http://localhost:8080
+4. Регистрация → Пост → Лайк → Комментарий
+
+
+## Команды
+- docker compose logs auth_service﻿
+- docker compose logs app_service﻿
+- docker compose logs postgres_app﻿
+- docker compose down
+  
 ## Технологии
 - Backend: C++17/20, Drogon, PostgreSQL
 - Frontend: Vanilla JS (ES6+), CSS, HTML5, Fetch API
