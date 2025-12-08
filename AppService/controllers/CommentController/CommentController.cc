@@ -7,25 +7,25 @@ void CommentController::getComments(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback,
     int64_t postId) const {
-  
+
   auto db = drogon::app().getDbClient();
 
   try {
-    auto result = db->execSqlSync(
-      "SELECT c.id, c.author_user_id, c.text, c.created_at, "
-      "       u.username "
-      "FROM comments c "
-      "LEFT JOIN users u ON u.user_id = c.author_user_id "
-      "WHERE c.post_id = $1 ORDER BY c.created_at ASC",
-      postId
-    );
+    auto result =
+        db->execSqlSync("SELECT c.id, c.author_user_id, c.text, c.created_at, "
+                        "       u.username "
+                        "FROM comments c "
+                        "LEFT JOIN users u ON u.user_id = c.author_user_id "
+                        "WHERE c.post_id = $1 ORDER BY c.created_at ASC",
+                        postId);
 
     Json::Value comments(Json::arrayValue);
     for (const auto &row : result) {
       Json::Value comment;
       comment["id"] = (Json::Int64)row["id"].as<int64_t>();
       comment["post_id"] = (Json::Int64)postId;
-      comment["author_user_id"] = (Json::Int64)row["author_user_id"].as<int64_t>();
+      comment["author_user_id"] =
+          (Json::Int64)row["author_user_id"].as<int64_t>();
 
       std::string text = row["text"].as<std::string>();
       comment["text"] = text;
@@ -63,7 +63,7 @@ void CommentController::createComment(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback,
     int64_t postId) const {
-  
+
   auto userId = req->attributes()->get<int64_t>("user_id");
   auto json = req->getJsonObject();
 
@@ -86,10 +86,8 @@ void CommentController::createComment(
   auto db = drogon::app().getDbClient();
 
   try {
-    auto postResult = db->execSqlSync(
-      "SELECT id FROM posts WHERE id = $1",
-      postId
-    );
+    auto postResult =
+        db->execSqlSync("SELECT id FROM posts WHERE id = $1", postId);
 
     if (postResult.empty()) {
       Json::Value response;
@@ -100,18 +98,16 @@ void CommentController::createComment(
       return;
     }
 
-    auto result = db->execSqlSync(
-      "INSERT INTO comments (post_id, author_user_id, text) VALUES ($1, $2, $3) RETURNING id, created_at",
-      postId, userId, text
-    );
+    auto result =
+        db->execSqlSync("INSERT INTO comments (post_id, author_user_id, text) "
+                        "VALUES ($1, $2, $3) RETURNING id, created_at",
+                        postId, userId, text);
 
     // Попробуем получить username автора, если он есть в таблице users
     std::string authorUsername;
     try {
       auto userRow = db->execSqlSync(
-        "SELECT username FROM users WHERE user_id = $1",
-        userId
-      );
+          "SELECT username FROM users WHERE user_id = $1", userId);
       if (!userRow.empty() && !userRow[0]["username"].isNull()) {
         authorUsername = userRow[0]["username"].as<std::string>();
       }
@@ -147,15 +143,13 @@ void CommentController::deleteComment(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback,
     int64_t commentId) const {
-  
+
   auto userId = req->attributes()->get<int64_t>("user_id");
   auto db = drogon::app().getDbClient();
 
   try {
     auto commentResult = db->execSqlSync(
-      "SELECT author_user_id FROM comments WHERE id = $1",
-      commentId
-    );
+        "SELECT author_user_id FROM comments WHERE id = $1", commentId);
 
     if (commentResult.empty()) {
       Json::Value response;
