@@ -1,8 +1,8 @@
 #include "MediaController.h"
-#include <json/value.h>
-#include <fstream>
-#include <filesystem>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <json/value.h>
 #include <vector>
 
 using namespace api;
@@ -10,7 +10,7 @@ using namespace api;
 void MediaController::uploadMedia(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) const {
-  
+
   MultiPartParser fileUpload;
   if (fileUpload.parse(req) != 0) {
     Json::Value response;
@@ -36,13 +36,14 @@ void MediaController::uploadMedia(
   // нам достаточно расширения файла для проверки.
   auto fileExtensionView = file.getFileExtension();
   std::string fileExtension(fileExtensionView.data(), fileExtensionView.size());
-  
+
   std::vector<std::string> allowedImages = {"jpg", "jpeg", "png", "gif"};
+
   std::vector<std::string> allowedVideos = {"mp4", "webm", "mov"};
-  
+
   std::string mediaType;
   bool isAllowed = false;
-  
+
   for (const auto &ext : allowedImages) {
     if (fileExtension == ext) {
       mediaType = "photo";
@@ -50,7 +51,7 @@ void MediaController::uploadMedia(
       break;
     }
   }
-  
+
   if (!isAllowed) {
     for (const auto &ext : allowedVideos) {
       if (fileExtension == ext) {
@@ -72,11 +73,12 @@ void MediaController::uploadMedia(
 
   try {
     std::filesystem::create_directories("uploads");
-    
-    std::string timestamp = std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+
+    std::string timestamp = std::to_string(
+        std::chrono::system_clock::now().time_since_epoch().count());
     std::string filename = timestamp + "_" + file.getFileName();
     std::string filepath = "uploads/" + filename;
-    
+
     // saveAs без префикса upload_path, чтобы не получить uploads/uploads
     file.saveAs(filename);
 
@@ -84,7 +86,7 @@ void MediaController::uploadMedia(
     response["file_path"] = filepath;
     response["type"] = mediaType;
     response["filename"] = filename;
-    
+
     auto resp = HttpResponse::newHttpJsonResponse(response);
     resp->setStatusCode(k201Created);
     callback(resp);
@@ -103,7 +105,7 @@ void MediaController::attachToPost(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback,
     int64_t postId) const {
-  
+
   auto userId = req->attributes()->get<int64_t>("user_id");
   auto json = req->getJsonObject();
 
@@ -123,9 +125,7 @@ void MediaController::attachToPost(
 
   try {
     auto postResult = db->execSqlSync(
-      "SELECT author_user_id FROM posts WHERE id = $1",
-      postId
-    );
+        "SELECT author_user_id FROM posts WHERE id = $1", postId);
 
     if (postResult.empty()) {
       Json::Value response;
@@ -145,10 +145,10 @@ void MediaController::attachToPost(
       return;
     }
 
-    auto result = db->execSqlSync(
-      "INSERT INTO attachments (post_id, type, file_path) VALUES ($1, $2, $3) RETURNING id, created_at",
-      postId, type, filePath
-    );
+    auto result =
+        db->execSqlSync("INSERT INTO attachments (post_id, type, file_path) "
+                        "VALUES ($1, $2, $3) RETURNING id, created_at",
+                        postId, type, filePath);
 
     Json::Value response;
     response["id"] = (Json::Int64)result[0]["id"].as<int64_t>();
