@@ -6,7 +6,7 @@ using namespace api;
 void PostController::createPost(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) const {
-  
+
   auto userId = req->attributes()->get<int64_t>("user_id");
   auto json = req->getJsonObject();
 
@@ -23,6 +23,7 @@ void PostController::createPost(
   std::string text;
   if (json->isMember("text")) {
     text = (*json)["text"].asString();
+
   } else {
     text = (*json)["content"].asString();
   }
@@ -32,9 +33,9 @@ void PostController::createPost(
 
   try {
     auto result = db->execSqlSync(
-      "INSERT INTO posts (author_user_id, text, visibility) VALUES ($1, $2, $3) RETURNING id, created_at, updated_at",
-      userId, text, visibility
-    );
+        "INSERT INTO posts (author_user_id, text, visibility) VALUES ($1, $2, "
+        "$3) RETURNING id, created_at, updated_at",
+        userId, text, visibility);
 
     Json::Value response;
     response["id"] = (Json::Int64)result[0]["id"].as<int64_t>();
@@ -66,7 +67,7 @@ void PostController::getPost(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback,
     int64_t postId) const {
-  
+
   auto db = drogon::app().getDbClient();
   int64_t currentUserId = 0;
   bool hasCurrentUser = false;
@@ -78,10 +79,10 @@ void PostController::getPost(
   }
 
   try {
-    auto postResult = db->execSqlSync(
-      "SELECT id, author_user_id, text, visibility, created_at, updated_at FROM posts WHERE id = $1",
-      postId
-    );
+    auto postResult =
+        db->execSqlSync("SELECT id, author_user_id, text, visibility, "
+                        "created_at, updated_at FROM posts WHERE id = $1",
+                        postId);
 
     if (postResult.empty()) {
       Json::Value response;
@@ -102,9 +103,8 @@ void PostController::getPost(
     post["updated_at"] = row["updated_at"].as<std::string>();
 
     auto attachmentsResult = db->execSqlSync(
-      "SELECT id, type, file_path FROM attachments WHERE post_id = $1",
-      postId
-    );
+        "SELECT id, type, file_path FROM attachments WHERE post_id = $1",
+        postId);
 
     Json::Value attachments(Json::arrayValue);
     for (const auto &attRow : attachmentsResult) {
@@ -116,17 +116,16 @@ void PostController::getPost(
     }
     post["attachments"] = attachments;
 
-    auto likesResult = hasCurrentUser
-                           ? db->execSqlSync(
-                                 "SELECT COUNT(*) as count, "
-                                 "       SUM(CASE WHEN user_id = $1 THEN 1 ELSE 0 END) as liked_by_me "
-                                 "FROM likes WHERE post_id = $2",
-                                 currentUserId,
-                                 postId)
-                           : db->execSqlSync(
-                                 "SELECT COUNT(*) as count, 0 as liked_by_me "
-                                 "FROM likes WHERE post_id = $1",
-                                 postId);
+    auto likesResult =
+        hasCurrentUser
+            ? db->execSqlSync("SELECT COUNT(*) as count, "
+                              "       SUM(CASE WHEN user_id = $1 THEN 1 ELSE 0 "
+                              "END) as liked_by_me "
+                              "FROM likes WHERE post_id = $2",
+                              currentUserId, postId)
+            : db->execSqlSync("SELECT COUNT(*) as count, 0 as liked_by_me "
+                              "FROM likes WHERE post_id = $1",
+                              postId);
     post["likes_count"] = (Json::Int64)likesResult[0]["count"].as<int64_t>();
     int64_t likedByMe = likesResult[0]["liked_by_me"].isNull()
                             ? 0
@@ -150,7 +149,7 @@ void PostController::updatePost(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback,
     int64_t postId) const {
-  
+
   auto userId = req->attributes()->get<int64_t>("user_id");
   auto json = req->getJsonObject();
 
@@ -167,9 +166,7 @@ void PostController::updatePost(
 
   try {
     auto postResult = db->execSqlSync(
-      "SELECT author_user_id FROM posts WHERE id = $1",
-      postId
-    );
+        "SELECT author_user_id FROM posts WHERE id = $1", postId);
 
     if (postResult.empty()) {
       Json::Value response;
@@ -204,11 +201,12 @@ void PostController::updatePost(
 
     if (!updates.empty()) {
       updates.push_back("updated_at = now()");
-      
+
       std::string sql = "UPDATE posts SET ";
       for (size_t i = 0; i < updates.size(); ++i) {
         sql += updates[i];
-        if (i < updates.size() - 1) sql += ", ";
+        if (i < updates.size() - 1)
+          sql += ", ";
       }
       sql += " WHERE id = $" + std::to_string(paramIndex);
 
@@ -238,15 +236,13 @@ void PostController::deletePost(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback,
     int64_t postId) const {
-  
+
   auto userId = req->attributes()->get<int64_t>("user_id");
   auto db = drogon::app().getDbClient();
 
   try {
     auto postResult = db->execSqlSync(
-      "SELECT author_user_id FROM posts WHERE id = $1",
-      postId
-    );
+        "SELECT author_user_id FROM posts WHERE id = $1", postId);
 
     if (postResult.empty()) {
       Json::Value response;
@@ -290,7 +286,7 @@ void PostController::getUserPosts(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback,
     int64_t userId) const {
-  
+
   auto db = drogon::app().getDbClient();
   int64_t currentUserId = 0;
   bool hasCurrentUser = false;
@@ -302,15 +298,15 @@ void PostController::getUserPosts(
   }
 
   try {
-    auto result = db->execSqlSync(
-      "SELECT p.id, p.author_user_id, p.text, p.visibility, p.created_at, p.updated_at, "
-      "       u.username, u.avatar_path "
-      "FROM posts p "
-      "LEFT JOIN users u ON u.user_id = p.author_user_id "
-      "WHERE p.author_user_id = $1 "
-      "ORDER BY p.created_at DESC",
-      userId
-    );
+    auto result =
+        db->execSqlSync("SELECT p.id, p.author_user_id, p.text, p.visibility, "
+                        "p.created_at, p.updated_at, "
+                        "       u.username, u.avatar_path "
+                        "FROM posts p "
+                        "LEFT JOIN users u ON u.user_id = p.author_user_id "
+                        "WHERE p.author_user_id = $1 "
+                        "ORDER BY p.created_at DESC",
+                        userId);
 
     Json::Value posts(Json::arrayValue);
     for (const auto &row : result) {
@@ -334,17 +330,16 @@ void PostController::getUserPosts(
       }
 
       int64_t postId = row["id"].as<int64_t>();
-      auto likesResult = hasCurrentUser
-                             ? db->execSqlSync(
-                                   "SELECT COUNT(*) as count, "
-                                   "       SUM(CASE WHEN user_id = $1 THEN 1 ELSE 0 END) as liked_by_me "
-                                   "FROM likes WHERE post_id = $2",
-                                   currentUserId,
-                                   postId)
-                             : db->execSqlSync(
-                                   "SELECT COUNT(*) as count, 0 as liked_by_me "
-                                   "FROM likes WHERE post_id = $1",
-                                   postId);
+      auto likesResult =
+          hasCurrentUser
+              ? db->execSqlSync("SELECT COUNT(*) as count, "
+                                "       SUM(CASE WHEN user_id = $1 THEN 1 ELSE "
+                                "0 END) as liked_by_me "
+                                "FROM likes WHERE post_id = $2",
+                                currentUserId, postId)
+              : db->execSqlSync("SELECT COUNT(*) as count, 0 as liked_by_me "
+                                "FROM likes WHERE post_id = $1",
+                                postId);
       post["likes_count"] = (Json::Int64)likesResult[0]["count"].as<int64_t>();
       int64_t likedByMe = likesResult[0]["liked_by_me"].isNull()
                               ? 0
@@ -352,15 +347,13 @@ void PostController::getUserPosts(
       post["is_liked"] = likedByMe > 0;
 
       auto commentsResult = db->execSqlSync(
-        "SELECT COUNT(*) as count FROM comments WHERE post_id = $1",
-        postId
-      );
-      post["comments_count"] = (Json::Int64)commentsResult[0]["count"].as<int64_t>();
+          "SELECT COUNT(*) as count FROM comments WHERE post_id = $1", postId);
+      post["comments_count"] =
+          (Json::Int64)commentsResult[0]["count"].as<int64_t>();
 
       auto attachmentsResult = db->execSqlSync(
-        "SELECT id, type, file_path FROM attachments WHERE post_id = $1",
-        postId
-      );
+          "SELECT id, type, file_path FROM attachments WHERE post_id = $1",
+          postId);
 
       Json::Value attachments(Json::arrayValue);
       for (const auto &attRow : attachmentsResult) {
@@ -392,15 +385,13 @@ void PostController::likePost(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback,
     int64_t postId) const {
-  
+
   auto userId = req->attributes()->get<int64_t>("user_id");
   auto db = drogon::app().getDbClient();
 
   try {
-    auto postResult = db->execSqlSync(
-      "SELECT id FROM posts WHERE id = $1",
-      postId
-    );
+    auto postResult =
+        db->execSqlSync("SELECT id FROM posts WHERE id = $1", postId);
 
     if (postResult.empty()) {
       Json::Value response;
@@ -411,10 +402,9 @@ void PostController::likePost(
       return;
     }
 
-    db->execSqlSync(
-      "INSERT INTO likes (post_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-      postId, userId
-    );
+    db->execSqlSync("INSERT INTO likes (post_id, user_id) VALUES ($1, $2) ON "
+                    "CONFLICT DO NOTHING",
+                    postId, userId);
 
     Json::Value response;
     response["success"] = true;
@@ -433,17 +423,15 @@ void PostController::likePost(
 
 void PostController::unlikePost(
     const HttpRequestPtr &req,
-std::function<void(const HttpResponsePtr &)> &&callback,
+    std::function<void(const HttpResponsePtr &)> &&callback,
     int64_t postId) const {
-  
+
   auto userId = req->attributes()->get<int64_t>("user_id");
   auto db = drogon::app().getDbClient();
 
   try {
-    db->execSqlSync(
-      "DELETE FROM likes WHERE post_id = $1 AND user_id = $2",
-      postId, userId
-    );
+    db->execSqlSync("DELETE FROM likes WHERE post_id = $1 AND user_id = $2",
+                    postId, userId);
 
     Json::Value response;
     response["success"] = true;
@@ -488,7 +476,8 @@ void PostController::searchPosts(
   }
   if (params.find("limit") != params.end()) {
     limit = std::stoi(params.at("limit"));
-    if (limit > 100) limit = 100;
+    if (limit > 100)
+      limit = 100;
   }
 
   auto db = drogon::app().getDbClient();
@@ -503,19 +492,23 @@ void PostController::searchPosts(
 
   try {
     std::string sql =
-        "SELECT p.id, p.author_user_id, p.text, p.visibility, p.created_at, p.updated_at, "
+        "SELECT p.id, p.author_user_id, p.text, p.visibility, p.created_at, "
+        "p.updated_at, "
         "       u.username, u.avatar_path, "
         "       ts_rank(to_tsvector('russian', coalesce(p.text, '')), "
         "               websearch_to_tsquery('russian', $2)) as rank, "
         "       CASE WHEN p.author_user_id IN ( "
-        "            SELECT following_user_id FROM follows WHERE follower_user_id = $1 "
+        "            SELECT following_user_id FROM follows WHERE "
+        "follower_user_id = $1 "
         "       ) THEN 0 ELSE 1 END AS follow_priority "
         "FROM posts p "
         "LEFT JOIN users u ON u.user_id = p.author_user_id "
         "WHERE p.visibility = 'public' "
-        "  AND to_tsvector('russian', coalesce(p.text, '')) @@ websearch_to_tsquery('russian', $2) "
+        "  AND to_tsvector('russian', coalesce(p.text, '')) @@ "
+        "websearch_to_tsquery('russian', $2) "
         "ORDER BY follow_priority ASC, rank DESC, p.created_at DESC "
-        "LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
+        "LIMIT " +
+        std::to_string(limit) + " OFFSET " + std::to_string(offset);
 
     int64_t userForPriority = hasCurrentUser ? currentUserId : 0;
 
@@ -543,17 +536,16 @@ void PostController::searchPosts(
       }
 
       int64_t postId = row["id"].as<int64_t>();
-      auto likesResult = hasCurrentUser
-                             ? db->execSqlSync(
-                                   "SELECT COUNT(*) as count, "
-                                   "       SUM(CASE WHEN user_id = $1 THEN 1 ELSE 0 END) as liked_by_me "
-                                   "FROM likes WHERE post_id = $2",
-                                   currentUserId,
-                                   postId)
-                             : db->execSqlSync(
-                                   "SELECT COUNT(*) as count, 0 as liked_by_me "
-                                   "FROM likes WHERE post_id = $1",
-                                   postId);
+      auto likesResult =
+          hasCurrentUser
+              ? db->execSqlSync("SELECT COUNT(*) as count, "
+                                "       SUM(CASE WHEN user_id = $1 THEN 1 ELSE "
+                                "0 END) as liked_by_me "
+                                "FROM likes WHERE post_id = $2",
+                                currentUserId, postId)
+              : db->execSqlSync("SELECT COUNT(*) as count, 0 as liked_by_me "
+                                "FROM likes WHERE post_id = $1",
+                                postId);
       post["likes_count"] = (Json::Int64)likesResult[0]["count"].as<int64_t>();
       int64_t likedByMe = likesResult[0]["liked_by_me"].isNull()
                               ? 0
@@ -561,15 +553,13 @@ void PostController::searchPosts(
       post["is_liked"] = likedByMe > 0;
 
       auto commentsResult = db->execSqlSync(
-        "SELECT COUNT(*) as count FROM comments WHERE post_id = $1",
-        postId
-      );
-      post["comments_count"] = (Json::Int64)commentsResult[0]["count"].as<int64_t>();
+          "SELECT COUNT(*) as count FROM comments WHERE post_id = $1", postId);
+      post["comments_count"] =
+          (Json::Int64)commentsResult[0]["count"].as<int64_t>();
 
       auto attachmentsResult = db->execSqlSync(
-        "SELECT id, type, file_path FROM attachments WHERE post_id = $1",
-        postId
-      );
+          "SELECT id, type, file_path FROM attachments WHERE post_id = $1",
+          postId);
 
       Json::Value attachments(Json::arrayValue);
       for (const auto &attRow : attachmentsResult) {
